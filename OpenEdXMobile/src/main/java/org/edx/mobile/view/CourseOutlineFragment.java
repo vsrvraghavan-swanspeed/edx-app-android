@@ -83,7 +83,6 @@ import org.edx.mobile.view.adapters.CourseOutlineAdapter;
 import org.edx.mobile.view.common.TaskProgressCallback;
 import org.edx.mobile.view.view_holders.PaymentActivity;
 import org.edx.mobile.viewModel.CourseDateViewModel;
-import org.edx.mobile.viewModel.ViewModelFactory;
 
 import java.util.HashMap;
 import java.util.List;
@@ -168,7 +167,7 @@ public class CourseOutlineFragment extends OfflineSupportBaseFragment
         errorNotification = new FullScreenErrorNotification(swipeContainer);
         loadingIndicator = view.findViewById(R.id.loading_indicator);
         flBulkDownload = view.findViewById(R.id.fl_bulk_download_container);
-        courseDateViewModel = new ViewModelProvider(this, new ViewModelFactory()).get(CourseDateViewModel.class);
+        courseDateViewModel = new ViewModelProvider(this).get(CourseDateViewModel.class);
         swipeContainer.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
