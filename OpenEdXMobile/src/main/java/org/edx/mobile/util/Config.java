@@ -650,7 +650,8 @@ public class Config {
     /// Please keep this alphabetized
 
     public String getApiHostURL() {
-        return getString(API_HOST_URL);
+//        return getString(API_HOST_URL);
+        return "https://iap.sandbox.edx.org/";
     }
 
     // User facing name of the platform like "edX"
@@ -673,7 +674,8 @@ public class Config {
     }
 
     public String getOAuthClientId() {
-        return getString(OAUTH_CLIENT_ID);
+//        return getString(OAUTH_CLIENT_ID);
+        return "LAbFDVlylloeK8N3FMMtsSXdZTq1CrtZtuS3tWig";
     }
 
     /**
