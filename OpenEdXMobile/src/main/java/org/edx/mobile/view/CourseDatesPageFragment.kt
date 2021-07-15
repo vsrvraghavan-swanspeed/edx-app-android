@@ -1,9 +1,14 @@
 package org.edx.mobile.view
 
+import android.Manifest
+import android.accounts.Account
+import android.accounts.AccountManager
 import android.app.Activity
+import android.content.ContentResolver
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
+import android.provider.CalendarContract
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -33,8 +38,10 @@ import org.edx.mobile.view.dialog.AlertDialogFragment
 import org.edx.mobile.viewModel.CourseDateViewModel
 import org.edx.mobile.viewModel.ViewModelFactory
 
+
 class CourseDatesPageFragment : OfflineSupportBaseFragment(), BaseFragment.PermissionListener {
 
+    private var syncAccount: Account? = null
     private lateinit var errorNotification: FullScreenErrorNotification
 
     private lateinit var binding: FragmentCourseDatesPageBinding
@@ -57,7 +64,7 @@ class CourseDatesPageFragment : OfflineSupportBaseFragment(), BaseFragment.Permi
     private var courseData: EnrolledCoursesResponse = EnrolledCoursesResponse()
     private var isSelfPaced: Boolean = true
     private lateinit var calendarTitle: String
-    private lateinit var accountName: String
+    private lateinit var accountEmail: String
     private var isCalendarExist: Boolean = false
 
 
@@ -99,7 +106,7 @@ class CourseDatesPageFragment : OfflineSupportBaseFragment(), BaseFragment.Permi
         courseData = arguments?.getSerializable(Router.EXTRA_COURSE_DATA) as EnrolledCoursesResponse
         calendarTitle = "${environment.config.platformName} - ${courseData.course.name}"
         isSelfPaced = courseData.course.isSelfPaced
-        accountName = environment.loginPrefs.currentUserProfile?.email ?: "local_user"
+        accountEmail = environment.loginPrefs.currentUserProfile?.email ?: "local_user"
 
         errorNotification = FullScreenErrorNotification(binding.swipeContainer)
 
@@ -141,8 +148,8 @@ class CourseDatesPageFragment : OfflineSupportBaseFragment(), BaseFragment.Permi
 
         viewModel.resetCourseDates.observe(viewLifecycleOwner, Observer { resetCourseDates ->
             if (resetCourseDates != null) {
-                if (CalendarUtils.isCalendarExists(contextOrThrow, accountName, calendarTitle)) {
-                    val calendarId = CalendarUtils.getCalendarId(contextOrThrow, accountName, calendarTitle)
+                if (CalendarUtils.isCalendarExists(contextOrThrow, accountEmail, calendarTitle)) {
+                    val calendarId = CalendarUtils.getCalendarId(contextOrThrow, accountEmail, calendarTitle)
                     val alertDialogFragment = AlertDialogFragment.newInstance(getString(R.string.title_calendar_out_of_date),
                             getString(R.string.message_calendar_out_of_date),
                             getString(R.string.label_update_now),
@@ -237,7 +244,7 @@ class CourseDatesPageFragment : OfflineSupportBaseFragment(), BaseFragment.Permi
                     }
                 }
             } else if (CalendarUtils.hasPermissions(context = contextOrThrow)) {
-                val calendarId = CalendarUtils.getCalendarId(context = contextOrThrow, accountName = accountName, calendarTitle = calendarTitle)
+                val calendarId = CalendarUtils.getCalendarId(context = contextOrThrow, accountName = accountEmail, calendarTitle = calendarTitle)
                 if (calendarId != (-1).toLong()) {
                     deleteCalendar(calendarId)
                 }
@@ -248,7 +255,7 @@ class CourseDatesPageFragment : OfflineSupportBaseFragment(), BaseFragment.Permi
     }
 
     private fun checkIfCalendarExists() {
-        isCalendarExist = CalendarUtils.isCalendarExists(context = contextOrThrow, accountName = accountName, calendarTitle = calendarTitle)
+        isCalendarExist = CalendarUtils.isCalendarExists(context = contextOrThrow, accountName = accountEmail, calendarTitle = calendarTitle)
         binding.switchSync.isChecked = isCalendarExist
     }
 
@@ -300,12 +307,29 @@ class CourseDatesPageFragment : OfflineSupportBaseFragment(), BaseFragment.Permi
     }
 
     private fun insertCalendarEvent() {
-        val accountType = "com.gmail"
-        accountName.let {
+        if (PermissionsUtil.checkPermissions(Manifest.permission.GET_ACCOUNTS, requireContext())
+            && PermissionsUtil.checkPermissions(
+                Manifest.permission.READ_SYNC_SETTINGS,
+                requireContext()
+            )
+        ) {
+            val accountManager = AccountManager.get(requireContext())
+            val accounts: Array<Account> = accountManager.accounts
+            for (account in accounts) {
+                val isSyncable = ContentResolver.getIsSyncable(account, CalendarContract.AUTHORITY)
+                if (isSyncable > 0 && accountEmail.equals(account.name, true)) {
+                    syncAccount = account
+                }
+            }
+            if(syncAccount == null && accounts.isNotEmpty()){
+                syncAccount = accounts[0]
+            }
+        }
+        syncAccount?.let{
             val calendarId: Long = CalendarUtils.createOrUpdateCalendar(
                 context = contextOrThrow,
-                accountName = it,
-                accountType = accountType,
+                accountName = it.name,
+                accountType = it.type,
                 calendarTitle = calendarTitle
             )
             // if app unable to create the Calendar for the course
@@ -333,6 +357,9 @@ class CourseDatesPageFragment : OfflineSupportBaseFragment(), BaseFragment.Permi
         courseDates?.courseDateBlocks?.forEach { courseDateBlock ->
             CalendarUtils.addEventsIntoCalendar(context = contextOrThrow, calendarId = calendarId, courseName = courseData.course.name, courseDateBlock = courseDateBlock)
         }
+//        val extras = Bundle()
+//        extras.putBoolean(ContentResolver.SYNC_EXTRAS_MANUAL, true)
+//        ContentResolver.requestSync(syncAccount, CalendarContract.AUTHORITY, extras)
         if (updateEvents) {
             showCalendarUpdatedSnackbar()
             trackCalendarEvent(Analytics.Events.CALENDAR_UPDATE_SUCCESS, Analytics.Values.CALENDAR_UPDATE_SUCCESS)

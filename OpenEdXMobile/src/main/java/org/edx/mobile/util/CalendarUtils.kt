@@ -1,7 +1,5 @@
 package org.edx.mobile.util
 
-import android.accounts.Account
-import android.accounts.AccountManager
 import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
@@ -51,24 +49,16 @@ object CalendarUtils {
         accountType: String,
         calendarTitle: String
     ): Long {
-        val calendarId: Long = getCalendarId(
-            context = context,
-            accountName = accountName,
-            calendarTitle = calendarTitle
-        )
+        val calendarId: Long = getCalendarId(context = context, accountName = accountName, calendarTitle = calendarTitle)
         return if (calendarId == (-1).toLong()) {
             createCalendar(
-                context = context,
-                accountName = accountName,
-                accountType = accountType,
-                calendarTitle = calendarTitle
+                context = context, accountName = accountName,
+                accountType = accountType, calendarTitle = calendarTitle
             )
         } else {
             deleteCalendar(context = context, calendarId = calendarId)
             createCalendar(
-                context = context,
-                accountName = accountName,
-                accountType = accountType,
+                context = context, accountName = accountName, accountType = accountType,
                 calendarTitle = calendarTitle
             )
         }
@@ -78,12 +68,17 @@ object CalendarUtils {
      * Method to create a separate calendar based on course name in mobile calendar app
      */
     @Suppress("RECEIVER_NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
-    fun createCalendar(context: Context, accountName: String, accountType: String,calendarTitle: String): Long {
+    fun createCalendar(
+        context: Context,
+        accountName: String,
+        accountType: String,
+        calendarTitle: String
+    ): Long {
         val contentValues = ContentValues()
-        contentValues.put(CalendarContract.Calendars.NAME, calendarTitle)
-        contentValues.put(CalendarContract.Calendars.CALENDAR_DISPLAY_NAME, calendarTitle)
+        contentValues.put(CalendarContract.Calendars.NAME, accountName)
+        contentValues.put(CalendarContract.Calendars.CALENDAR_DISPLAY_NAME, accountName)
         contentValues.put(CalendarContract.Calendars.ACCOUNT_NAME, accountName)
-        contentValues.put(CalendarContract.Calendars.CAL_SYNC1, accountName)
+//        contentValues.put(CalendarContract.Calendars.CAL_SYNC1, accountName)
         contentValues.put(CalendarContract.Calendars.ACCOUNT_TYPE, accountType)
         contentValues.put(
             CalendarContract.Calendars.CALENDAR_COLOR,
@@ -96,6 +91,7 @@ object CalendarUtils {
         contentValues.put(CalendarContract.Calendars.OWNER_ACCOUNT, accountName)
         contentValues.put(CalendarContract.Calendars.SYNC_EVENTS, 1)
         contentValues.put(CalendarContract.Calendars.VISIBLE, 1)
+        contentValues.put(CalendarContract.Calendars._SYNC_ID, accountName)
         val creationUri: Uri? = asSyncAdapter(
             Uri.parse(CalendarContract.Calendars.CONTENT_URI.toString()),
             accountName,
@@ -121,38 +117,37 @@ object CalendarUtils {
         val projection = arrayOf(
             CalendarContract.Calendars._ID,
             CalendarContract.Calendars.ACCOUNT_NAME,
-            CalendarContract.Calendars.OWNER_ACCOUNT,
-            CalendarContract.Calendars.NAME
-        )
+            CalendarContract.Calendars.NAME)
         val calendarContentResolver = context.contentResolver
-        val cursor: Cursor = calendarContentResolver.query(
+        var cursor: Cursor = calendarContentResolver.query(
             CalendarContract.Calendars.CONTENT_URI, projection,
             CalendarContract.Calendars.NAME + "=? or " +
                     CalendarContract.Calendars.CALENDAR_DISPLAY_NAME + "=?", arrayOf(
-                calendarTitle, calendarTitle
+                accountName, accountName
             ), null
         )
         if (cursor.moveToFirst()) {
             if (cursor.getString(cursor.getColumnIndex(CalendarContract.Calendars.NAME))
-                    .equals(calendarTitle)
+                    .equals(accountName)
             )
                 calendarId = cursor.getInt(cursor.getColumnIndex(CalendarContract.Calendars._ID))
         }
         cursor.close()
-
-        val deleteCursor = calendarContentResolver.query(
+        // temp code
+        cursor = calendarContentResolver.query(
             CalendarContract.Calendars.CONTENT_URI,
             arrayOf(),
             null,
             null,
             null
         )
-        if (deleteCursor.moveToFirst()) {
+        if (cursor.moveToFirst()) {
             do {
-                logger.debug(deleteCursor.getString(deleteCursor.getColumnIndex(CalendarContract.Calendars._ID)))
+                logger.debug(cursor.getString(cursor.getColumnIndex(CalendarContract.Calendars._ID)))
 
-            } while (deleteCursor.moveToNext())
+            } while (cursor.moveToNext())
         }
+        cursor.close()
         return calendarId.toLong()
     }
 
