@@ -99,7 +99,7 @@ class CourseDatesPageFragment : OfflineSupportBaseFragment(), BaseFragment.Permi
         courseData = arguments?.getSerializable(Router.EXTRA_COURSE_DATA) as EnrolledCoursesResponse
         calendarTitle = "${environment.config.platformName} - ${courseData.course.name}"
         isSelfPaced = courseData.course.isSelfPaced
-        accountName = environment.loginPrefs.currentUserProfile?.name ?: "local_user"
+        accountName = environment.loginPrefs.currentUserProfile?.email ?: "local_user"
 
         errorNotification = FullScreenErrorNotification(binding.swipeContainer)
 
@@ -300,14 +300,26 @@ class CourseDatesPageFragment : OfflineSupportBaseFragment(), BaseFragment.Permi
     }
 
     private fun insertCalendarEvent() {
-        val calendarId: Long = CalendarUtils.createOrUpdateCalendar(context = contextOrThrow, accountName = accountName, calendarTitle = calendarTitle)
-        // if app unable to create the Calendar for the course
-        if (calendarId == (-1).toLong()) {
-            Toast.makeText(contextOrThrow, "Error Adding Calendar, Please try later", Toast.LENGTH_SHORT).show()
-            binding.switchSync.isChecked = false
-            return
+        val accountType = "com.gmail"
+        accountName.let {
+            val calendarId: Long = CalendarUtils.createOrUpdateCalendar(
+                context = contextOrThrow,
+                accountName = it,
+                accountType = accountType,
+                calendarTitle = calendarTitle
+            )
+            // if app unable to create the Calendar for the course
+            if (calendarId == (-1).toLong()) {
+                Toast.makeText(
+                    contextOrThrow,
+                    "Error Adding Calendar, Please try later",
+                    Toast.LENGTH_SHORT
+                ).show()
+                binding.switchSync.isChecked = false
+                return
+            }
+            addOrUpdateEventsInCalendar(calendarId, false)
         }
-        addOrUpdateEventsInCalendar(calendarId, false)
     }
 
     private fun addOrUpdateEventsInCalendar(calendarId: Long, updateEvents: Boolean) {

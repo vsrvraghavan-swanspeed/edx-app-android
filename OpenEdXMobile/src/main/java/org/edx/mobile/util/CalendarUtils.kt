@@ -1,5 +1,7 @@
 package org.edx.mobile.util
 
+import android.accounts.Account
+import android.accounts.AccountManager
 import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
@@ -13,6 +15,7 @@ import org.edx.mobile.R
 import org.edx.mobile.logger.Logger
 import org.edx.mobile.model.course.CourseDateBlock
 import java.util.*
+
 
 @Suppress("RECEIVER_NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
 object CalendarUtils {
@@ -42,13 +45,32 @@ object CalendarUtils {
     /**
      * Create or update the calendar if it is already existed in mobile calendar app
      */
-    fun createOrUpdateCalendar(context: Context, accountName: String, calendarTitle: String): Long {
-        val calendarId: Long = getCalendarId(context = context, accountName = accountName, calendarTitle = calendarTitle)
+    fun createOrUpdateCalendar(
+        context: Context,
+        accountName: String,
+        accountType: String,
+        calendarTitle: String
+    ): Long {
+        val calendarId: Long = getCalendarId(
+            context = context,
+            accountName = accountName,
+            calendarTitle = calendarTitle
+        )
         return if (calendarId == (-1).toLong()) {
-            createCalendar(context = context, accountName = accountName, calendarTitle = calendarTitle)
+            createCalendar(
+                context = context,
+                accountName = accountName,
+                accountType = accountType,
+                calendarTitle = calendarTitle
+            )
         } else {
             deleteCalendar(context = context, calendarId = calendarId)
-            createCalendar(context = context, accountName = accountName, calendarTitle = calendarTitle)
+            createCalendar(
+                context = context,
+                accountName = accountName,
+                accountType = accountType,
+                calendarTitle = calendarTitle
+            )
         }
     }
 
@@ -56,17 +78,29 @@ object CalendarUtils {
      * Method to create a separate calendar based on course name in mobile calendar app
      */
     @Suppress("RECEIVER_NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
-    fun createCalendar(context: Context, accountName: String, calendarTitle: String): Long {
+    fun createCalendar(context: Context, accountName: String, accountType: String,calendarTitle: String): Long {
         val contentValues = ContentValues()
         contentValues.put(CalendarContract.Calendars.NAME, calendarTitle)
         contentValues.put(CalendarContract.Calendars.CALENDAR_DISPLAY_NAME, calendarTitle)
         contentValues.put(CalendarContract.Calendars.ACCOUNT_NAME, accountName)
-        contentValues.put(CalendarContract.Calendars.ACCOUNT_TYPE, CalendarContract.ACCOUNT_TYPE_LOCAL)
-        contentValues.put(CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL, CalendarContract.Calendars.CAL_ACCESS_ROOT)
+        contentValues.put(CalendarContract.Calendars.CAL_SYNC1, accountName)
+        contentValues.put(CalendarContract.Calendars.ACCOUNT_TYPE, accountType)
+        contentValues.put(
+            CalendarContract.Calendars.CALENDAR_COLOR,
+            ContextCompat.getColor(context, R.color.primaryBaseColor)
+        )
+        contentValues.put(
+            CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL,
+            CalendarContract.Calendars.CAL_ACCESS_OWNER
+        )
+        contentValues.put(CalendarContract.Calendars.OWNER_ACCOUNT, accountName)
         contentValues.put(CalendarContract.Calendars.SYNC_EVENTS, 1)
         contentValues.put(CalendarContract.Calendars.VISIBLE, 1)
-        contentValues.put(CalendarContract.Calendars.CALENDAR_COLOR, ContextCompat.getColor(context, R.color.primaryBaseColor))
-        val creationUri: Uri? = asSyncAdapter(Uri.parse(CalendarContract.Calendars.CONTENT_URI.toString()), accountName)
+        val creationUri: Uri? = asSyncAdapter(
+            Uri.parse(CalendarContract.Calendars.CONTENT_URI.toString()),
+            accountName,
+            accountType
+        )
         creationUri?.let {
             val calendarData: Uri? = context.contentResolver.insert(creationUri, contentValues)
             calendarData?.let {
@@ -85,19 +119,39 @@ object CalendarUtils {
     fun getCalendarId(context: Context, accountName: String, calendarTitle: String): Long {
         var calendarId = -1
         val projection = arrayOf(
-                CalendarContract.Calendars._ID,
-                CalendarContract.Calendars.ACCOUNT_NAME,
-                CalendarContract.Calendars.NAME)
+            CalendarContract.Calendars._ID,
+            CalendarContract.Calendars.ACCOUNT_NAME,
+            CalendarContract.Calendars.OWNER_ACCOUNT,
+            CalendarContract.Calendars.NAME
+        )
         val calendarContentResolver = context.contentResolver
         val cursor: Cursor = calendarContentResolver.query(
-                CalendarContract.Calendars.CONTENT_URI, projection,
-                CalendarContract.Calendars.ACCOUNT_NAME + "=? and (" +
-                        CalendarContract.Calendars.NAME + "=? or " +
-                        CalendarContract.Calendars.CALENDAR_DISPLAY_NAME + "=?)", arrayOf(accountName, calendarTitle,
-                calendarTitle), null)
+            CalendarContract.Calendars.CONTENT_URI, projection,
+            CalendarContract.Calendars.NAME + "=? or " +
+                    CalendarContract.Calendars.CALENDAR_DISPLAY_NAME + "=?", arrayOf(
+                calendarTitle, calendarTitle
+            ), null
+        )
         if (cursor.moveToFirst()) {
-            if (cursor.getString(2).equals(calendarTitle))
-                calendarId = cursor.getInt(0)
+            if (cursor.getString(cursor.getColumnIndex(CalendarContract.Calendars.NAME))
+                    .equals(calendarTitle)
+            )
+                calendarId = cursor.getInt(cursor.getColumnIndex(CalendarContract.Calendars._ID))
+        }
+        cursor.close()
+
+        val deleteCursor = calendarContentResolver.query(
+            CalendarContract.Calendars.CONTENT_URI,
+            arrayOf(),
+            null,
+            null,
+            null
+        )
+        if (deleteCursor.moveToFirst()) {
+            do {
+                logger.debug(deleteCursor.getString(deleteCursor.getColumnIndex(CalendarContract.Calendars._ID)))
+
+            } while (deleteCursor.moveToNext())
         }
         return calendarId.toLong()
     }
@@ -128,7 +182,6 @@ object CalendarUtils {
         }
         val uri = context.contentResolver.insert(CalendarContract.Events.CONTENT_URI, values)
         addReminderToEvent(context = context, uri = uri)
-
     }
 
     /**
@@ -223,10 +276,10 @@ object CalendarUtils {
      * @return URI of the calendar
      *
      */
-    private fun asSyncAdapter(uri: Uri, account: String): Uri? {
+    private fun asSyncAdapter(uri: Uri, account: String, accountType: String): Uri? {
         return uri.buildUpon().appendQueryParameter(CalendarContract.CALLER_IS_SYNCADAPTER, "true")
                 .appendQueryParameter(CalendarContract.SyncState.ACCOUNT_NAME, account)
-                .appendQueryParameter(CalendarContract.SyncState.ACCOUNT_TYPE, CalendarContract.ACCOUNT_TYPE_LOCAL).build()
+                .appendQueryParameter(CalendarContract.SyncState.ACCOUNT_TYPE, accountType).build()
     }
 
     fun openCalendarApp(fragment: Fragment) {
