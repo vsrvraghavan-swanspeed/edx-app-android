@@ -675,7 +675,7 @@ public class Config {
 
     public String getOAuthClientId() {
 //        return getString(OAUTH_CLIENT_ID);
-        return "95AC4a3VFiTBhiiPz8xF8BXPP9XEXoKyBIgNh3Sk";
+        return "login-service-client-id";
     }
 
     /**
