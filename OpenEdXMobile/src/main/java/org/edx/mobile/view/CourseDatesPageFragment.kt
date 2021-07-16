@@ -4,11 +4,10 @@ import android.Manifest
 import android.accounts.Account
 import android.accounts.AccountManager
 import android.app.Activity
-import android.content.ContentResolver
+import android.app.AlertDialog
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
-import android.provider.CalendarContract
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -41,7 +40,6 @@ import org.edx.mobile.viewModel.ViewModelFactory
 
 class CourseDatesPageFragment : OfflineSupportBaseFragment(), BaseFragment.PermissionListener {
 
-    private var syncAccount: Account? = null
     private lateinit var errorNotification: FullScreenErrorNotification
 
     private lateinit var binding: FragmentCourseDatesPageBinding
@@ -315,17 +313,32 @@ class CourseDatesPageFragment : OfflineSupportBaseFragment(), BaseFragment.Permi
         ) {
             val accountManager = AccountManager.get(requireContext())
             val accounts: Array<Account> = accountManager.accounts
-            for (account in accounts) {
-                val isSyncable = ContentResolver.getIsSyncable(account, CalendarContract.AUTHORITY)
-                if (isSyncable > 0 && accountEmail.equals(account.name, true)) {
-                    syncAccount = account
-                }
-            }
-            if(syncAccount == null && accounts.isNotEmpty()){
-                syncAccount = accounts[0]
+            showAccountSelectionDialog(accounts)
+        }
+    }
+
+    private fun showAccountSelectionDialog(accounts: Array<Account>) {
+        val accountNames = arrayListOf<String>()
+        for (account in accounts) {
+            accountNames.add(account.name)
+        }
+        val alertDialog: AlertDialog.Builder = AlertDialog.Builder(context)
+        alertDialog.setSingleChoiceItems(
+            accountNames.toTypedArray(),
+            0
+        ) { dialog, position ->
+            run {
+                dialog.dismiss()
+                createCalendar(accounts[position])
             }
         }
-        syncAccount?.let{
+        alertDialog.setNegativeButton("Cancel", null)
+        alertDialog.setTitle("Select calender")
+        alertDialog.show()
+    }
+
+    private fun createCalendar(syncAccount: Account) {
+        syncAccount.let{
             val calendarId: Long = CalendarUtils.createOrUpdateCalendar(
                 context = contextOrThrow,
                 accountName = it.name,

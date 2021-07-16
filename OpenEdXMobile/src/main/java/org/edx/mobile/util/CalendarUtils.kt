@@ -50,18 +50,19 @@ object CalendarUtils {
         calendarTitle: String
     ): Long {
         val calendarId: Long = getCalendarId(context = context, accountName = accountName, calendarTitle = calendarTitle)
-        return if (calendarId == (-1).toLong()) {
-            createCalendar(
-                context = context, accountName = accountName,
-                accountType = accountType, calendarTitle = calendarTitle
-            )
-        } else {
-            deleteCalendar(context = context, calendarId = calendarId)
-            createCalendar(
-                context = context, accountName = accountName, accountType = accountType,
-                calendarTitle = calendarTitle
-            )
-        }
+        return calendarId
+//        return if (calendarId == (-1).toLong()) {
+//            createCalendar(
+//                context = context, accountName = accountName,
+//                accountType = accountType, calendarTitle = calendarTitle
+//            )
+//        } else {
+//            deleteCalendar(context = context, calendarId = calendarId)
+//            createCalendar(
+//                context = context, accountName = accountName, accountType = accountType,
+//                calendarTitle = calendarTitle
+//            )
+//        }
     }
 
     /**
@@ -258,7 +259,7 @@ object CalendarUtils {
      * Method to delete the course calendar from the mobile calendar app
      */
     fun deleteCalendar(context: Context, calendarId: Long) {
-        context.contentResolver.delete(Uri.parse("content://com.android.calendar/calendars/$calendarId"), null, null)
+//        context.contentResolver.delete(Uri.parse("content://com.android.calendar/calendars/$calendarId"), null, null)
     }
 
     /**
