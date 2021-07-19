@@ -39,7 +39,7 @@
                 android:paddingStart="@dimen/course_card_detail_padding_start"
                 android:paddingTop="@dimen/course_card_detail_padding_top"
                 android:paddingEnd="@dimen/course_card_detail_padding_end"
-                android:paddingBottom="@dimen/widget_margin">
+                android:paddingBottom="@dimen/course_card_detail_padding_bottom">
 
                 <TextView
                     android:id="@+id/course_name"

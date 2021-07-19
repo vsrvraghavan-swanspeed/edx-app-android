@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
 
     <style name="video_player_title" parent="@style/semibold_white_text">
         <item name="android:layout_width">0dp</item>
@@ -167,14 +166,12 @@
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:textSize">@dimen/edx_small</item>
-        <item name="android:lineHeight" tools:ignore="NewApi">@dimen/course_card_line_height</item>
         <item name="android:maxLines">3</item>
         <item name="android:ellipsize">end</item>
     </style>
 
     <style name="course_card_course_run" parent="@style/regular_neutral_xx_dark_text">
         <item name="android:singleLine">true</item>
-        <item name="android:lineHeight" tools:ignore="NewApi">@dimen/course_card_line_height</item>
         <item name="android:textSize">@dimen/edx_x_small</item>
     </style>
 
