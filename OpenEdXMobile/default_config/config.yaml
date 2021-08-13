@@ -1,5 +1,5 @@
-API_HOST_URL: 'http://10.0.2.2:8000' # localhost is 10.0.2.2 in Android
+API_HOST_URL: 'http://app.e-numeracy.com' # localhost is 10.0.2.2 in Android
 ENVIRONMENT_DISPLAY_NAME: 'Localhost'
-PLATFORM_NAME: 'Your platform name here'
-PLATFORM_DESTINATION_NAME: 'example.com'
-FEEDBACK_EMAIL_ADDRESS: 'support@example.com'
+PLATFORM_NAME: 'E-Numeracy'
+PLATFORM_DESTINATION_NAME: 'e-numeracy.com'
+FEEDBACK_EMAIL_ADDRESS: 'support@e-numeracy.com'
